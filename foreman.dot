@@ -47,8 +47,6 @@ node "Capsule" {
   smart_proxy ..> server_apache : 443
   smart_proxy_apache ..> smart_proxy
 
-  qdrouterd_capsule ..> qpidd_capsule : localhost:5671
-
   pulp_capsule ..> mongo_capsule : localhost:27017
   pulp_capsule ..> qpidd_capsule : hostname:5671
 }
