@@ -60,11 +60,13 @@ node "server" {
 
   candlepin ..> qpidd_server : hostname:5671
 
+  foreman <..> puppet_master
 }
 
 node "Capsule" {
   [Foreman Proxy] as smart_proxy
   [Apache (Smart Proxy)] as smart_proxy_apache
+  [Puppet Master] as smart_proxy_puppet_master
 
   node "Pulp" as pulp_capsule {
     [API] as pulp_capsule_api
@@ -75,7 +77,7 @@ node "Capsule" {
   [MongoDB] as mongo_capsule
   [Dispatch Router] as qdrouterd_capsule
 
-  smart_proxy ..> server_apache : 443
+  smart_proxy -[#green]-> foreman : 443
   smart_proxy_apache ..> smart_proxy
 
   pulp_capsule_api ..> mongo_capsule : localhost:27017
@@ -101,10 +103,10 @@ node "Isolated Client" {
 
 smart_proxy_apache ..> server_apache : 443
 
-isolated_rhsm ..> smart_proxy_apache : 8443
-isolated_yum ..> smart_proxy_apache : 443
-isolated_yum ..> smart_proxy_apache : 80
-isolated_katello_agent ..> qdrouterd_capsule : 5647
+isolated_rhsm -[#green]-> smart_proxy_apache : 8443
+isolated_yum -[#green]-> smart_proxy_apache : 443
+isolated_yum -[#red]..> smart_proxy_apache : 80
+isolated_katello_agent -[#green]-> qdrouterd_capsule : 5647
 isolated_puppet ..> smart_proxy_apache : 443
 
 browser ..> server_apache : 80
@@ -112,7 +114,7 @@ browser ..> server_apache : 443
 rhsm ..> server_apache : 443
 yum ..> server_apache : 443
 yum ..> server_apache : 80
-katello_agent ..> qdrouterd_server : 5647
+katello_agent -[#green]-> qdrouterd_server : 5647
 
 katello ..> pulp_capsule_api
 
@@ -120,6 +122,14 @@ qdrouterd_capsule ..> qdrouterd_server : hostname:5646
 
 foreman ..> smart_proxy_apache : 9090
 
-puppet ..> server_apache : 443
+puppet <..> puppet_master : 443
+isolated_puppet <..> smart_proxy_puppet_master : 443
+
+legend right
+  (Green) -> SSL two-way
+  (Orange) -> SSL one-way
+  (Cyan) -> SSL no cert validation
+  (Red) ..> no SSL
+endlegend
 
 @enduml
