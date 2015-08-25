@@ -7,7 +7,12 @@ node "server" {
   [Katello] as katello
   [Postgres] as postgres
   [Candlepin] as candlepin
-  [Pulp] as pulp_server
+
+  node "Pulp" as pulp_server{
+    [API] as pulp_server_api
+    [pulp_* processes] as pulp_server_backend
+  }
+
   [Elasticsearch] as elasticsearch
   [MongoDB] as mongo_server
   [Qpid] as qpidd_server
@@ -23,14 +28,17 @@ node "server" {
   candlepin ..> postgres: localhost
 
   katello ..> candlepin : localhost:8443
-  katello ..> pulp_server : hostname:443
+  katello ..> pulp_server_api : hostname:443
   katello ..> elasticsearch : localhost:9200
   katello ..> qpidd_server : hostname:5671
 
   qdrouterd_server ..> qpidd_server : localhost:5671
 
-  pulp_server ..> mongo_server : localhost:27017
-  pulp_server ..> qpidd_server : hostname:5671
+  pulp_server_api ..> mongo_server : localhost:27017
+  pulp_server_api ..> qpidd_server : hostname:5671
+
+  pulp_server_backend ..> mongo_server : localhost:27017
+  pulp_server_backend ..> qpidd_server : hostname:5671
 
   candlepin ..> qpidd_server : hostname:5671
 
@@ -39,7 +47,12 @@ node "server" {
 node "Capsule" {
   [Foreman Proxy] as smart_proxy
   [Apache (Smart Proxy)] as smart_proxy_apache
-  [Pulp] as pulp_capsule
+
+  node "Pulp" as pulp_capsule {
+    [API] as pulp_capsule_api
+    [pulp_* process] as pulp_capsule_backend
+  }
+
   [Qpid] as qpidd_capsule
   [MongoDB] as mongo_capsule
   [Dispatch Router] as qdrouterd_capsule
@@ -47,8 +60,11 @@ node "Capsule" {
   smart_proxy ..> server_apache : 443
   smart_proxy_apache ..> smart_proxy
 
-  pulp_capsule ..> mongo_capsule : localhost:27017
-  pulp_capsule ..> qpidd_capsule : hostname:5671
+  pulp_capsule_api ..> mongo_capsule : localhost:27017
+  pulp_capsule_api ..> qpidd_capsule : hostname:5671
+
+  pulp_capsule_backend ..> mongo_capsule : localhost:27017
+  pulp_capsule_backend ..> qpidd_capsule : hostname:5671
 }
 
 node "Client" {
@@ -79,6 +95,8 @@ rhsm ..> server_apache : 443
 yum ..> server_apache : 443
 yum ..> server_apache : 80
 katello_agent ..> qdrouterd_server : 5647
+
+katello ..> pulp_capsule_api
 
 qdrouterd_capsule ..> qdrouterd_server : hostname:5646
 
