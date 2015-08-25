@@ -3,12 +3,10 @@
 [Browser] as browser
 
 node "server" {
-  [Foreman] as foreman
-  [Katello] as katello
   [Postgres] as postgres
   [Candlepin] as candlepin
 
-  node "Pulp" as pulp_server{
+  node "Pulp" as pulp_server {
     [API] as pulp_server_api
     [pulp_* processes] as pulp_server_backend
   }
@@ -20,16 +18,36 @@ node "server" {
   [Server Apache] as server_apache
   [Puppet Master] as puppet_master
 
-  katello - foreman
+  node "Foreman Application" {
+    [Foreman] as foreman
+    [Katello] as katello
+    [Foreman Tasks] as foreman_tasks
+    [Dynflow] as dynflow
+    [Foreman Docker] as foreman_docker
+    [Foreman Discovery] as foreman_discovery
+    [Foreman SCAP] as foreman_scap
+
+    foreman_tasks -down-> dynflow
+    katello -> foreman
+    katello -> foreman_tasks
+    katello -> foreman_docker
+
+    foreman_discovery -> foreman
+    foreman_docker -> foreman
+    foreman_scap -> foreman
+    foreman_tasks -> foreman
+
+    dynflow ..> postgres
+  }
 
   server_apache ..> foreman
 
-  foreman ..> postgres : localhost
-  candlepin ..> postgres: localhost
+  foreman -down..> postgres : localhost
+  candlepin -down..> postgres: localhost
 
-  katello ..> candlepin : localhost:8443
-  katello ..> pulp_server_api : hostname:443
-  katello ..> elasticsearch : localhost:9200
+  katello -down..> candlepin : localhost:8443
+  katello -down..> pulp_server_api : hostname:443
+  katello -down..> elasticsearch : localhost:9200
   katello ..> qpidd_server : hostname:5671
 
   qdrouterd_server ..> qpidd_server : localhost:5671
