@@ -27,27 +27,27 @@ node "server" {
     [Foreman Discovery] as foreman_discovery
     [Foreman SCAP] as foreman_scap
 
-    foreman_tasks -down-> dynflow
-    katello -> foreman
-    katello -> foreman_tasks
-    katello -> foreman_docker
+    foreman_tasks -down..> dynflow
+    katello ..> foreman
+    katello ..> foreman_tasks
+    katello ..> foreman_docker
 
-    foreman_discovery -> foreman
-    foreman_docker -> foreman
-    foreman_scap -> foreman
-    foreman_tasks -> foreman
+    foreman_discovery ..> foreman
+    foreman_docker ..> foreman
+    foreman_scap ..> foreman
+    foreman_tasks ..> foreman
 
     dynflow ..> postgres
   }
 
   server_apache ..> foreman
 
-  foreman -down..> postgres : localhost
-  candlepin -down..> postgres: localhost
+  foreman -[#red]down-> postgres : localhost
+  candlepin -[#red]down-> postgres: localhost
 
-  katello -down..> candlepin : localhost:8443
-  katello -[#orange]-> pulp_server_api : hostname:443
-  katello -down..> elasticsearch : localhost:9200
+  katello -[#cyan]down-> candlepin : localhost:8443
+  katello -[#cyan]-> pulp_server_api : hostname:443
+  katello -[#red]down-> elasticsearch : localhost:9200
   katello ..> qpidd_server : hostname:5671
 
   qdrouterd_server ..> qpidd_server : localhost:5671
@@ -110,9 +110,9 @@ isolated_katello_agent -[#green]-> qdrouterd_capsule : 5647
 isolated_puppet ..> smart_proxy_apache : 443
 
 browser -[#red]-> server_apache : 80
-browser ..> server_apache : 443
-rhsm ..> server_apache : 443
-yum  ..> server_apache : 443
+browser -[#orange]-> server_apache : 443
+rhsm -[#green]-> server_apache : 443
+yum  -[#green]-> server_apache : 443
 yum -[#red]-> server_apache : 80
 katello_agent -[#green]-> qdrouterd_server : 5647
 
@@ -120,10 +120,10 @@ katello -[#orange]-> pulp_capsule_api
 
 qdrouterd_capsule ..> qdrouterd_server : hostname:5646
 
-foreman ..> smart_proxy_apache : 9090
+foreman -[#green]-> smart_proxy_apache : 9090
 
-puppet ..> puppet_master : 443
-isolated_puppet ..> smart_proxy_puppet_master : 443
+puppet -[#green]-> puppet_master : 443
+isolated_puppet -[#green]-> smart_proxy_puppet_master : 8140
 
 legend right
   (Green) -> SSL two-way
