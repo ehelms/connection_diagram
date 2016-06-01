@@ -6,41 +6,44 @@ node "server" {
   [Postgres] as postgres
   [Candlepin] as candlepin
 
-  node "Pulp" as pulp_server {
-    [API] as pulp_server_api
-    [pulp_* processes] as pulp_server_backend
-  }
-
   [Elasticsearch] as elasticsearch
   [MongoDB] as mongo_server
   [Qpid] as qpidd_server
   [Dispatch Router] as qdrouterd_server
-  [Server Apache] as server_apache
-  [Puppet Master] as puppet_master
+  [Smart Proxy] as server_smart_proxy
 
-  node "Foreman Application" {
-    [Foreman] as foreman
-    [Katello] as katello
-    [Foreman Tasks] as foreman_tasks
-    [Dynflow] as dynflow
-    [Foreman Docker] as foreman_docker
-    [Foreman Discovery] as foreman_discovery
-    [Foreman SCAP] as foreman_scap
+  node "Apache" as server_apache {
 
-    foreman_tasks -down..> dynflow
-    katello ..> foreman
-    katello ..> foreman_tasks
-    katello ..> foreman_docker
+    node "Pulp" as pulp_server {
+      [API] as pulp_server_api
+      [pulp_* processes] as pulp_server_backend
+    }
 
-    foreman_discovery ..> foreman
-    foreman_docker ..> foreman
-    foreman_scap ..> foreman
-    foreman_tasks ..> foreman
+    [Puppet Master] as puppet_master
 
-    dynflow ..> postgres
+    node "Foreman Application" {
+      [Foreman] as foreman
+      [Katello] as katello
+      [Foreman Tasks] as foreman_tasks
+      [Dynflow] as dynflow
+      [Foreman Docker] as foreman_docker
+      [Foreman Discovery] as foreman_discovery
+      [Foreman SCAP] as foreman_scap
+
+      foreman_tasks -down..> dynflow
+      katello ..> foreman
+      katello ..> foreman_tasks
+      katello ..> foreman_docker
+
+      foreman_discovery ..> foreman
+      foreman_docker ..> foreman
+      foreman_scap ..> foreman
+      foreman_tasks ..> foreman
+
+      dynflow ..> postgres
+    }
+
   }
-
-  server_apache ..> foreman
 
   foreman -[#red]down-> postgres : localhost
   candlepin -[#red]down-> postgres: localhost
@@ -48,9 +51,9 @@ node "server" {
   katello -[#cyan]down-> candlepin : localhost:8443
   katello -[#cyan]-> pulp_server_api : hostname:443
   katello -[#red]down-> elasticsearch : localhost:9200
-  katello ..> qpidd_server : hostname:5671
+  katello -[#orange]> qpidd_server : hostname:5671
 
-  qdrouterd_server ..> qpidd_server : localhost:5671
+  qdrouterd_server -[#green]-> qpidd_server : localhost:5671
 
   pulp_server_api -[#red]-> mongo_server : localhost:27017
   pulp_server_api -[#green]-> qpidd_server : hostname:5671
@@ -58,27 +61,29 @@ node "server" {
   pulp_server_backend -[#red]-> mongo_server : localhost:27017
   pulp_server_backend -[#green]-> qpidd_server : hostname:5671
 
-  candlepin ..> qpidd_server : hostname:5671
+  candlepin -[#orange]-> qpidd_server : hostname:5671
 
-  foreman ..> puppet_master
+  foreman -[#green]-> server_smart_proxy
 }
 
 node "Capsule" {
-  [Foreman Proxy] as smart_proxy
-  [Apache (Smart Proxy)] as smart_proxy_apache
-  [Puppet Master] as smart_proxy_puppet_master
-
-  node "Pulp" as pulp_capsule {
-    [API] as pulp_capsule_api
-    [pulp_* process] as pulp_capsule_backend
-  }
+  [Smart Proxy] as smart_proxy
 
   [Qpid] as qpidd_capsule
   [MongoDB] as mongo_capsule
   [Dispatch Router] as qdrouterd_capsule
 
+  node "Apache (Smart Proxy)" as smart_proxy_apache {
+  
+    [Puppet Master] as smart_proxy_puppet_master
+
+    node "Pulp" as pulp_capsule {
+      [API] as pulp_capsule_api
+      [pulp_* process] as pulp_capsule_backend
+    }
+  }
+
   smart_proxy -[#green]-> foreman : 443
-  smart_proxy_apache ..> smart_proxy
 
   pulp_capsule_api -[#red]-> mongo_capsule : localhost:27017
   pulp_capsule_api -[#green]-> qpidd_capsule : hostname:5671
@@ -101,24 +106,22 @@ node "Isolated Client" {
   [Isolated Puppet] as isolated_puppet
 }
 
-smart_proxy_apache ..> server_apache : 443
+smart_proxy_apache -[#green]-> server_apache : 443
 
 isolated_rhsm -[#green]-> smart_proxy_apache : 8443
 isolated_yum -[#green]-> smart_proxy_apache : 443
 isolated_yum -[#red]-> smart_proxy_apache : 80
 isolated_katello_agent -[#green]-> qdrouterd_capsule : 5647
-isolated_puppet ..> smart_proxy_apache : 443
+isolated_puppet -[#green]-> smart_proxy_puppet_master : 443
 
 browser -[#red]-> server_apache : 80
-browser -[#orange]-> server_apache : 443
-rhsm -[#green]-> server_apache : 443
+browser -[#orange]-> foreman : 443
+rhsm -[#green]-> katello : 443
 yum  -[#green]-> server_apache : 443
 yum -[#red]-> server_apache : 80
 katello_agent -[#green]-> qdrouterd_server : 5647
 
-katello -[#orange]-> pulp_capsule_api
-
-qdrouterd_capsule ..> qdrouterd_server : hostname:5646
+qdrouterd_capsule -[#green]-> qdrouterd_server : hostname:5646
 
 foreman -[#green]-> smart_proxy_apache : 9090
 
