@@ -65,8 +65,8 @@ node "server" {
   pulp_worker_server -[#green]-> qpidd_server : localhost:5671
   pulp_celerybeat_server -[#green]-> qpidd_server : localhost:5671
   pulp_resource_manager_server -[#green]-> qpidd_server : localhost:5671
-  pulp_streamer -[#red]-> mongo_server : localhost:27017
-  pulp_streamer -[#red]-> squid
+  pulp_streamer_server -[#red]-> mongo_server : localhost:27017
+  pulp_streamer_server -[#red]-> squid
 
   candlepin -[#red]down-> postgres: localhost
   candlepin -[#orange]-> qpidd_server : localhost:5671
@@ -77,7 +77,7 @@ node "server" {
 }
 
 node "Foreman Proxy" {
-  [Smart Proxy] as smart_proxy
+  [Smart Proxy] as smart_proxy_foreman_proxy
 
   [Qpid] as qpidd_foreman_proxy
   [MongoDB] as mongo_foreman_proxy
@@ -118,7 +118,11 @@ node "Client" {
   [Katello Agent] as katello_agent
   [Puppet] as puppet
 
-  puppet -[#green]-> puppet_server : 443
+  puppet -[#green]-> puppet_server : 8122
+  rhsm -[#green]-> katello : 443
+  yum -[#green]-> repo_auth : 443
+  yum -[#red]-> pulp_streamer_server : 80
+  katello_agent -[#green]-> qdrouterd_server : 5647
 }
 
 node "Isolated Client" {
@@ -126,24 +130,16 @@ node "Isolated Client" {
   [Isolated RHSM] as isolated_rhsm
   [Isolated Katello Agent] as isolated_katello_agent
   [Isolated Puppet] as isolated_puppet
+
+  isolated_rhsm -[#green]-> apache_foreman_proxy : 8443
+  isolated_yum -[#green]-> apache_foreman_proxy : 443
+  isolated_yum -[#red]-> apache_foreman_proxy : 80
+  isolated_katello_agent -[#green]-> qdrouterd_foreman_proxy : 5647
+  isolated_puppet -[#green]-> puppet_server_foreman_proxy : 8122
 }
 
-smart_proxy_apache -[#green]-> server_apache : 443
-
-isolated_rhsm -[#green]-> smart_proxy_apache : 8443
-isolated_yum -[#green]-> smart_proxy_apache : 443
-isolated_yum -[#red]-> smart_proxy_apache : 80
-isolated_katello_agent -[#green]-> qdrouterd_foreman_proxy : 5647
-isolated_puppet -[#green]-> smart_proxy_puppet_server : 443
-
-browser -[#red]-> server_apache : 80
+browser -[#red]-> apache_server : 80
 browser -[#orange]-> foreman : 443
-rhsm -[#green]-> katello : 443
-yum  -[#green]-> server_apache : 443
-yum -[#red]-> server_apache : 80
-katello_agent -[#green]-> qdrouterd_server : 5647
-
-foreman -[#green]-> smart_proxy_apache : 9090
 
 isolated_puppet -[#green]-> smart_proxy_puppet_server : 8140
 
