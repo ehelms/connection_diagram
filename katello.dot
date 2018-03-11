@@ -1,10 +1,20 @@
 @startuml
 
 node "Server" {
-  [Postgres] as postgres
+  database "Postgres" {
+    frame "candlepin" as postgres_candlepin {
+    }
+    frame "foreman" as postgres_foreman {
+    }
+  }
+
+  database "MongoDB" {
+    frame "pulp_database" as mongo_server {
+    }
+  }
+
   [Candlepin] as candlepin
 
-  [MongoDB] as mongo_server
   [Qpid] as qpidd_server
   [Dispatch Router] as qdrouterd_server
   [Smart Proxy] as smart_proxy_server
@@ -47,8 +57,8 @@ node "Server" {
 
   }
 
-  foreman -[#red]--> postgres : localhost
-  dynflow_server -[#red]--> postgres : localhost
+  foreman -[#red]--> postgres_foreman : localhost
+  dynflow_server -[#red]--> postgres_foreman : localhost
 
   katello -[#cyan]down-> candlepin : localhost:8443
   katello -[#cyan]-> pulp_api_server : hostname:443
@@ -66,19 +76,25 @@ node "Server" {
   pulp_streamer_server -[#red]--> mongo_server : localhost:27017
   pulp_streamer_server -[#red]-> squid
 
-  candlepin -[#red]--> postgres: localhost
+  candlepin -[#red]--> postgres_candlepin : localhost
   candlepin -[#orange]--> qpidd_server : localhost:5671
 
   foreman -[#green]-> smart_proxy_server : hostname:9090
 
   smart_proxy_server -[#green]-> foreman : hostname:443
+
+  puppet_server -[#green]-> foreman : hostname:443
 }
 
 node "Foreman Proxy" {
   [Smart Proxy] as smart_proxy_foreman_proxy
 
+  database "MongoDB Foreman Proxy" {
+    frame "pulp_database" as mongo_foreman_proxy {
+    }
+  }
+
   [Qpid] as qpidd_foreman_proxy
-  [MongoDB] as mongo_foreman_proxy
   [Dispatch Router] as qdrouterd_foreman_proxy
 
   [Puppet Server] as puppet_server_foreman_proxy
