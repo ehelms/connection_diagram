@@ -1,8 +1,6 @@
 @startuml
 
-[Browser] as browser
-
-node "server" {
+node "Server" {
   [Postgres] as postgres
   [Candlepin] as candlepin
 
@@ -19,7 +17,7 @@ node "server" {
   [Pulp Worker] as pulp_worker_server
   [Squid] as squid
 
-  node "Apache" as server_apache {
+  node "Apache" as apache_server {
 
     node "Foreman Application" {
       [Foreman] as foreman
@@ -49,30 +47,30 @@ node "server" {
 
   }
 
-  foreman -[#red]down-> postgres : localhost
-  dynflow_server -[#red]-> postgres : localhost
+  foreman -[#red]--> postgres : localhost
+  dynflow_server -[#red]--> postgres : localhost
 
   katello -[#cyan]down-> candlepin : localhost:8443
   katello -[#cyan]-> pulp_api_server : hostname:443
-  katello -[#orange]> qpidd_server : localhost:5671
+  katello -[#orange]--> qpidd_server : localhost:5671
 
-  qdrouterd_server -[#green]-> qpidd_server : localhost:5671
+  qdrouterd_server -[#green]--> qpidd_server : localhost:5671
 
-  pulp_api_server -[#red]-> mongo_server : localhost:27017
-  pulp_api_server -[#green]-> qpidd_server : localhost:5671
+  pulp_api_server -[#red]--> mongo_server : localhost:27017
+  pulp_api_server -[#green]--> qpidd_server : localhost:5671
 
-  pulp_worker_server -[#red]-> mongo_server : localhost:27017
-  pulp_worker_server -[#green]-> qpidd_server : localhost:5671
-  pulp_celerybeat_server -[#green]-> qpidd_server : localhost:5671
-  pulp_resource_manager_server -[#green]-> qpidd_server : localhost:5671
-  pulp_streamer_server -[#red]-> mongo_server : localhost:27017
+  pulp_worker_server -[#red]--> mongo_server : localhost:27017
+  pulp_worker_server -[#green]--> qpidd_server : localhost:5671
+  pulp_celerybeat_server -[#green]--> qpidd_server : localhost:5671
+  pulp_resource_manager_server -[#green]--> qpidd_server : localhost:5671
+  pulp_streamer_server -[#red]--> mongo_server : localhost:27017
   pulp_streamer_server -[#red]-> squid
 
-  candlepin -[#red]down-> postgres: localhost
-  candlepin -[#orange]-> qpidd_server : localhost:5671
+  candlepin -[#red]--> postgres: localhost
+  candlepin -[#orange]--> qpidd_server : localhost:5671
 
   foreman -[#green]-> smart_proxy_server : hostname:9090
-  foreman -[#green]-> smart_proxy_foreman_proxy : hostname:9090
+
   smart_proxy_server -[#green]-> foreman : hostname:443
 }
 
@@ -85,31 +83,30 @@ node "Foreman Proxy" {
 
   [Puppet Server] as puppet_server_foreman_proxy
 
+  [Pulp Resource Manager] as pulp_resource_manager_foreman_proxy
+  [Pulp Celerybeat] as pulp_celerybeat_foreman_proxy
+  [Pulp Worker] as pulp_worker_foreman_proxy
+
   node "Apache" as apache_foreman_proxy {
 
     node "Pulp" as pulp_foreman_proxy {
       [API] as pulp_api_foreman_proxy
+      [Repo Auth] as repo_auth_foreman_proxy
     }
 
     [Crane] as crane_server
   }
 
-  smart_proxy -[#green]-> foreman : 443
+  qdrouterd_foreman_proxy -[#green]--> qdrouterd_server : hostname:5646
 
-  pulp_api_foreman_proxy -[#red]-> mongo_foreman_proxy : localhost:27017
-  pulp_api_foreman_proxy -[#green]-> qpidd_foreman_proxy : hostname:5671
+  pulp_api_foreman_proxy -[#red]--> mongo_foreman_proxy : localhost:27017
+  pulp_api_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
+  pulp_api_foreman_proxy -[#green]--> repo_auth_server : hostname:5671
 
-  qdrouterd_foreman_proxy -[#green]-> qdrouterd_server : hostname:5646
-
-  pulp_api_foreman_proxy -[#red]-> mongo_foreman_proxy : localhost:27017
-  pulp_api_foreman_proxy -[#green]-> qpidd_foreman_proxy : localhost:5671
-  pulp_api_foreman_proxy -[#green]-> apache_server : hostname:5671
-
-  pulp_worker_foreman_proxy -[#red]-> mongo_foreman_proxy : localhost:27017
-  pulp_worker_foreman_proxy -[#green]-> qpidd_foreman_proxy : localhost:5671
-  pulp_celerybeat_foreman_proxy -[#green]-> qpidd_foreman_proxy : localhost:5671
-  pulp_resource_manager_foreman_proxy -[#green]-> qpidd_foreman_proxy : localhost:5671
-
+  pulp_worker_foreman_proxy -[#red]--> mongo_foreman_proxy : localhost:27017
+  pulp_worker_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
+  pulp_celerybeat_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
+  pulp_resource_manager_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
 }
 
 node "Client" {
@@ -117,12 +114,14 @@ node "Client" {
   [RHSM] as rhsm
   [Katello Agent] as katello_agent
   [Puppet] as puppet
+  [Docker] as docker
 
-  puppet -[#green]-> puppet_server : 8122
-  rhsm -[#green]-> katello : 443
-  yum -[#green]-> repo_auth : 443
-  yum -[#red]-> pulp_streamer_server : 80
-  katello_agent -[#green]-> qdrouterd_server : 5647
+  puppet -[#green]--> puppet_server : 8122
+  rhsm -[#green]--> katello : 443
+  yum -[#green]--> repo_auth_server : 443
+  yum -[#red]--> pulp_streamer_server : 80
+  katello_agent -[#green]--> qdrouterd_server : 5647
+  docker --> crane_server : 5000
 }
 
 node "Isolated Client" {
@@ -131,17 +130,20 @@ node "Isolated Client" {
   [Isolated Katello Agent] as isolated_katello_agent
   [Isolated Puppet] as isolated_puppet
 
-  isolated_rhsm -[#green]-> apache_foreman_proxy : 8443
-  isolated_yum -[#green]-> apache_foreman_proxy : 443
-  isolated_yum -[#red]-> apache_foreman_proxy : 80
-  isolated_katello_agent -[#green]-> qdrouterd_foreman_proxy : 5647
-  isolated_puppet -[#green]-> puppet_server_foreman_proxy : 8122
+  isolated_rhsm -[#green]--> apache_foreman_proxy : 8443
+  isolated_yum -[#green]--> repo_auth_foreman_proxy : 443
+  isolated_yum -[#red]--> apache_foreman_proxy : 80
+  isolated_katello_agent -[#green]--> qdrouterd_foreman_proxy : 5647
+  isolated_puppet -[#green]--> puppet_server_foreman_proxy : 8122
 }
 
-browser -[#red]-> apache_server : 80
-browser -[#orange]-> foreman : 443
+node "Browser" as browser {
+  browser -[#red]--> apache_server : 80
+  browser -[#orange]--> foreman : 443
+}
 
-isolated_puppet -[#green]-> smart_proxy_puppet_server : 8140
+foreman -[#green]--> smart_proxy_foreman_proxy : hostname:9090
+smart_proxy_foreman_proxy -[#green]--> foreman : 443
 
 legend right
   (Green) -> SSL two-way

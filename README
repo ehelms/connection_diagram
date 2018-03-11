@@ -1,3 +1,5 @@
+## How to Build
+
 1. Clone this repo
 2. Download the plantuml.jar file which builds the diagram. Get it from:  http://plantuml.com/download.html
-3. Run `java -jar plantuml.jar katello.dot` to produce the `katello.png` file
+3. Run `java -DPLANTUML_LIMIT_SIZE=8192 -jar plantuml.jar katello.dot` to produce the `katello.png` file
