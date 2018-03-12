@@ -17,7 +17,6 @@ node "Server" {
 
   [Qpid] as qpidd_server
   [Dispatch Router] as qdrouterd_server
-  [Smart Proxy] as smart_proxy_server
   [Dynflow] as dynflow_server
 
   [Puppet Server] as puppet_server
@@ -36,15 +35,28 @@ node "Server" {
       [Foreman Docker] as foreman_docker
       [Foreman Discovery] as foreman_discovery
       [Foreman SCAP] as foreman_scap
+      [Foreman Templates] as foreman_templates
+      [Foreman Remote Execution] as foreman_remote_execution
+      [Foreman Bootdisk] as foreman_bootdisk
+      [Foreman Hooks] as foreman_hooks
 
       katello ..> foreman
       katello ..> foreman_tasks
       katello ..> foreman_docker
 
+      foreman_remote_execution ..> foreman
+      foreman_remote_execution ..> foreman_tasks
+
+      foreman_ansible ..> foreman
+      foreman_ansible ..> foreman_remote_execution
+
       foreman_discovery ..> foreman
       foreman_docker ..> foreman
       foreman_scap ..> foreman
       foreman_tasks ..> foreman
+      foreman_templates ..> foreman
+      foreman_bootdisk ..> foreman
+      foreman_hooks ..> foreman
     }
 
     node "Pulp" as pulp_server {
@@ -55,6 +67,14 @@ node "Server" {
 
     [Crane] as crane_server
 
+  }
+
+  node "Smart Proxy" as smart_proxy_server {
+    [Smart Proxy DHCP Remote ISC] as smart_proxy_dhcp_remote_isc_server
+    [Smart Proxy Remote Execution SSH] as smart_proxy_remote_execution_ssh_server
+    [Smart Proxy Openscap] as smart_proxy_openscap_server
+    [Smart Proxy Pulp] as smart_proxy_pulp_server
+    [Smart Proxy Discovery] as smart_proxy_discovery_server
   }
 
   foreman -[#red]--> postgres_foreman : localhost
@@ -87,10 +107,22 @@ node "Server" {
 }
 
 node "Foreman Proxy" {
-  [Smart Proxy] as smart_proxy_foreman_proxy
+  node "Smart Proxy" as smart_proxy_foreman_proxy {
+    [Smart Proxy DHCP Remote ISC] as smart_proxy_dhcp_remote_isc_foreman_proxy
+    [Smart Proxy Remote Execution SSH] as smart_proxy_remote_execution_ssh_foreman_proxy
+    [Smart Proxy Openscap] as smart_proxy_openscap_foreman_proxy
+    [Smart Proxy Pulp] as smart_proxy_pulp_foreman_proxy
+    [Smart Proxy Discovery] as smart_proxy_discovery_foreman_proxy
+  }
 
   database "MongoDB Foreman Proxy" {
     frame "pulp_database" as mongo_foreman_proxy {
+    }
+  }
+
+  database "Sqlite" {
+    frame "in_memory" as sqlite_in_memory {
+
     }
   }
 
@@ -103,6 +135,8 @@ node "Foreman Proxy" {
   [Pulp Celerybeat] as pulp_celerybeat_foreman_proxy
   [Pulp Worker] as pulp_worker_foreman_proxy
 
+  [Dynflow] as dynflow_foreman_proxy
+
   node "Apache" as apache_foreman_proxy {
 
     node "Pulp" as pulp_foreman_proxy {
@@ -112,6 +146,8 @@ node "Foreman Proxy" {
 
     [Crane] as crane_server
   }
+
+  dynflow_foreman_proxy --> sqlite_in_memory
 
   qdrouterd_foreman_proxy -[#green]--> qdrouterd_server : hostname:5646
 
