@@ -32,14 +32,15 @@ node "Server" {
     node "Foreman Application" {
       [Foreman] as foreman
       [Katello] as katello
-      [Foreman Tasks] as foreman_tasks
-      [Foreman Docker] as foreman_docker
-      [Foreman Discovery] as foreman_discovery
-      [Foreman SCAP] as foreman_scap
-      [Foreman Templates] as foreman_templates
-      [Foreman Remote Execution] as foreman_remote_execution
+      [Foreman Ansible] as foreman_ansible
       [Foreman Bootdisk] as foreman_bootdisk
+      [Foreman Discovery] as foreman_discovery
+      [Foreman Docker] as foreman_docker
       [Foreman Hooks] as foreman_hooks
+      [Foreman Remote Execution] as foreman_remote_execution
+      [Foreman SCAP] as foreman_scap
+      [Foreman Tasks] as foreman_tasks
+      [Foreman Templates] as foreman_templates
 
       katello ..> foreman
       katello ..> foreman_tasks
@@ -84,6 +85,8 @@ node "Server" {
   katello -[#cyan]down-> candlepin : localhost:8443
   katello -[#cyan]-> pulp_api_server : hostname:443
   katello -[#orange]--> qpidd_server : localhost:5671
+
+  foreman_remote_execution --> smart_proxy_remote_execution_ssh_server : 9090
 
   qdrouterd_server -[#green]--> qpidd_server : localhost:5671
 
@@ -166,6 +169,8 @@ node "Foreman Proxy" {
   pulp_worker_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
   pulp_celerybeat_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
   pulp_resource_manager_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
+
+  foreman_remote_execution --> smart_proxy_remote_execution_ssh_foreman_proxy : 9090
 }
 
 node "Client" {
@@ -174,6 +179,8 @@ node "Client" {
   [Katello Agent] as katello_agent
   [Puppet] as puppet
   [Docker] as docker
+  [Foreman Scap Client] as foreman_scap_client
+  [SSH] as ssh
 
   puppet -[#green]--> puppet_server : 8122
   rhsm -[#green]--> katello : 443
@@ -181,6 +188,7 @@ node "Client" {
   yum -[#red]--> streamer_auth_server : 443
   katello_agent -[#green]--> qdrouterd_server : 5647
   docker --> crane_server : 5000
+  foreman_scap_client --> smart_proxy_server : 9090
 }
 
 node "Isolated Client" {
@@ -188,12 +196,15 @@ node "Isolated Client" {
   [Isolated RHSM] as isolated_rhsm
   [Isolated Katello Agent] as isolated_katello_agent
   [Isolated Puppet] as isolated_puppet
+  [Isolated Foreman Scap Client] as isolated_foreman_scap_client
+  [Isolated SSH] as isolated_ssh
 
   isolated_rhsm -[#green]--> apache_foreman_proxy : 8443
   isolated_yum -[#green]--> repo_auth_foreman_proxy : 443
   isolated_yum -[#red]--> apache_foreman_proxy : 80
   isolated_katello_agent -[#green]--> qdrouterd_foreman_proxy : 5647
   isolated_puppet -[#green]--> puppet_server_foreman_proxy : 8122
+  isolated_foreman_scap_client --> smart_proxy_foreman_proxy : 9090
 }
 
 node "Browser" as browser {
@@ -203,6 +214,9 @@ node "Browser" as browser {
 
 foreman -[#green]--> smart_proxy_foreman_proxy : hostname:9090
 smart_proxy_foreman_proxy -[#green]--> foreman : 443
+
+smart_proxy_remote_execution_ssh_server --> ssh : 22
+smart_proxy_remote_execution_ssh_foreman_proxy --> isolated_ssh : 22
 
 legend right
   (Green) -> SSL two-way
