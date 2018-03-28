@@ -13,6 +13,13 @@ node "Server" {
     }
   }
 
+  database "File System" {
+    folder "/var/lib/pulp" as pulp_content {
+    }
+    folder "/etc/puppetlabs/code/environments" as puppet_content {
+    }
+  }
+
   [Candlepin] as candlepin
 
   [Qpid] as qpidd_server
@@ -93,8 +100,12 @@ node "Server" {
   pulp_api_server -[#red]--> mongo_server : localhost:27017
   pulp_api_server -[#green]--> qpidd_server : localhost:5671
 
+  apache_server --> pulp_content
+
   pulp_worker_server -[#red]--> mongo_server : localhost:27017
   pulp_worker_server -[#green]--> qpidd_server : localhost:5671
+  pulp_worker_server --> pulp_content
+  pulp_worker_server --> puppet_content
   pulp_celerybeat_server -[#green]--> qpidd_server : localhost:5671
   pulp_resource_manager_server -[#green]--> qpidd_server : localhost:5671
 
@@ -110,6 +121,7 @@ node "Server" {
   smart_proxy_server -[#green]-> foreman : hostname:443
 
   puppet_server -[#green]-> foreman : hostname:443
+  puppet_server --> puppet_content
 }
 
 node "Foreman Proxy" {
@@ -129,6 +141,13 @@ node "Foreman Proxy" {
   database "Sqlite" {
     frame "in_memory" as sqlite_in_memory {
 
+    }
+  }
+
+  database "File System Foreman Proxy" {
+    folder "/var/lib/pulp" as pulp_content_foreman_proxy {
+    }
+    folder "/etc/puppetlabs/code/environments" as puppet_content_foreman_proxy {
     }
   }
 
@@ -169,6 +188,11 @@ node "Foreman Proxy" {
   pulp_worker_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
   pulp_celerybeat_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
   pulp_resource_manager_foreman_proxy -[#green]--> qpidd_foreman_proxy : localhost:5671
+
+  apache_foreman_proxy --> pulp_content_foreman_proxy
+  pulp_worker_foreman_proxy --> pulp_content_foreman_proxy
+  pulp_worker_foreman_proxy --> puppet_content_foreman_proxy
+  puppet_server_foreman_proxy --> puppet_content_foreman_proxy
 
   foreman_remote_execution --> smart_proxy_remote_execution_ssh_foreman_proxy : 9090
 }
