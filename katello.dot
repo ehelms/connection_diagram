@@ -1,8 +1,14 @@
 @startuml
 
+title <b>Satellite BIG Picture</b>
+
 [Browser] as browser
 
 node "Server" {
+
+'	interface Waldirio {
+'		Listening on hostname:8080
+'	}
 	[Postgres] as postgres
 	[MongoDB] as mongo_server
 	[Qpid] as qpidd_server
@@ -51,7 +57,7 @@ node "Server" {
 }
 
 
-node "Capsule" {
+node "Isolated Capsule" {
 	[MongoDB] as mongo_capsule
 	[Qpid] as qpidd_capsule
 	[Qdrouterd / Dispatch Router] as qdrouterd_capsule
@@ -82,6 +88,11 @@ node "Isolated Client" {
 	[Isolated Puppet Agent] as isolated_puppet
 }
 
+'Note Section
+
+note right of postgres
+localhost:5432 
+end note
 
 '# # # CONNECTIONS # # #
 
@@ -91,7 +102,9 @@ node "Isolated Client" {
 rhsm -[#green]-> katello : 443
 
 ' Puppet Agent
+'''Updated port from 443 to 8140
 puppet -[#green]-> puppet_master : 443
+
 
 ' Katello Agent / Goferd
 katello_agent -[#green]-> qdrouterd_server : 5647
@@ -100,6 +113,7 @@ katello_agent -[#green]-> qdrouterd_server : 5647
 yum  -[#green]-> server_apache : 443
 yum -[#red]-> server_apache : 80
 '---
+
 
 '## Satellite Server ##
 '---
@@ -112,7 +126,8 @@ mod_wsgi_pulp_forg -> mongo_server: localhost:27017
 'Foreman
 foreman -> qpidd_server : localhost:5671
 foreman -[#red]down-> postgres : localhost:5432
-foreman -[#green]-> server_smart_proxy
+''' Added hostname:9090
+foreman -[#green]-> server_smart_proxy : hostname:9090
 
 'Pulp
 pulp_server_worker -[#red]-> mongo_server : localhost:27017
@@ -127,6 +142,8 @@ pulp_server_streamer -[#green]-> qpidd_server : hostname:5671
 
 'Foreman Tasks / Dynflow
 foreman_tasks -> qpidd_server : hostname:5671
+''' Added connection to the Postgres
+foreman_tasks -> postgres : localhost:5432
 
 'Candlepin
 candlepin -[#red]down-> postgres: localhost:5432
@@ -150,8 +167,11 @@ foreman_virt_who_configure ..> foreman
 foreman_tasks ..> postgres
 
 'Katello
+''' OK
 katello -[#cyan]down-> candlepin : localhost:8443
+''' OK
 katello -[#cyan]-> pulp_server_api : hostname:443
+''' OK
 katello -[#orange]> qpidd_server : hostname:5671
 
 'Qdrouterd / Dispatch Router
@@ -210,10 +230,13 @@ browser -[#orange]-> foreman : 443
 
 
 legend right
-  (Green) -> SSL two-way
-  (Orange) -> SSL one-way
-  (Cyan) -> SSL no cert validation
-  (Red) -> no SSL
+	(Green) -> SSL two-way
+	(Orange) -> SSL one-way
+	(Cyan) -> SSL no cert validation
+	(Red) -> no SSL
+
+	(Isolated Capsule) -> External Capsule
+	(Isolated Content Host) -> Content Host registered on the External Capsule
 endlegend
 
 @enduml
