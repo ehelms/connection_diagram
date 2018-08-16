@@ -4,24 +4,36 @@ title <b>Satellite BIG Picture</b>
 
 [Browser] as browser
 
-node "Server" {
+package "Content Host" {
+	[Yum] as yum
+	[RHSM / Subscription Manager] as rhsm
+	[Katello Agent / Goferd] as katello_agent
+	[Puppet Agent] as puppet
+}
+
+frame "Satellite Server" {
 
 '	interface Waldirio {
 '		Listening on hostname:8080
 '	}
-	[Postgres] as postgres
-	[MongoDB] as mongo_server
+
+	database "Server DB" {
+		[Postgres] as postgres
+		[MongoDB] as mongo_server
+	}
+	
+	
 	[Qpid] as qpidd_server
 	[Qdrouterd / Dispatch Router] as qdrouterd_server
 	[Smart Proxy / Foreman Proxy] as server_smart_proxy
 	[Smart Proxy Dynflow Core] as server_smart_proxy_dynflow_core
 	[Squid] as server_squid
 
-	node "Tomcat" as tomcat_server {
+	frame "Tomcat" as tomcat_server {
 	  [Candlepin] as candlepin
 	}
 
-	node "Pulp" as pulp_server {
+	frame "Pulp" as pulp_server {
 		[API] as pulp_server_api
 		[Pulp Worker] as pulp_server_worker
 		[Pulp Resource Manager] as pulp_server_resource_manager
@@ -29,13 +41,13 @@ node "Server" {
 		[Pulp Streamer] as pulp_server_streamer
 	}
 
-	node "Apache" as server_apache {
+	frame "Apache" as server_apache {
 		[Puppet Master] as puppet_master
 		[Mod WSGI] as mod_wsgi
 		[Mod WSGI pulp-cont] as mod_wsgi_pulp_cont
 		[Mod WSGI pulp-forg] as mod_wsgi_pulp_forg
 
-		node "Foreman Application" {
+		frame "Foreman Application" {
 			[Foreman] as foreman
 			[Katello] as katello
 			[Foreman Tasks / Dynflow] as foreman_tasks
@@ -48,23 +60,28 @@ node "Server" {
 		}
 	}
 
-	node "Client" {
-		[Yum] as yum
-		[RHSM / Subscription Manager] as rhsm
-		[Katello Agent / Goferd] as katello_agent
-		[Puppet Agent] as puppet
-	}
+}
+
+package "Isolated Content Host" {
+	[Isolated Yum] as isolated_yum
+	[Isolated RHSM / Subscription Manager] as isolated_rhsm
+	[Isolated Katello Agent / Goferd] as isolated_katello_agent
+	[Isolated Puppet Agent] as isolated_puppet
 }
 
 
-node "Isolated Capsule" {
-	[MongoDB] as mongo_capsule
+frame "Isolated Capsule" {
+	
+	database "Capsule DB" {
+		[MongoDB] as mongo_capsule
+	}
+	
 	[Qpid] as qpidd_capsule
 	[Qdrouterd / Dispatch Router] as qdrouterd_capsule
 	[Smart Proxy / Foreman Proxy] as capsule_smart_proxy
 	[Squid] as capsule_squid
 
-	node "Pulp" as pulp_capsule {
+	frame "Pulp" as pulp_capsule {
 		[API] as pulp_capsule_api
 		[Pulp Worker] as pulp_capsule_worker
 		[Pulp Resource Manager] as pulp_capsule_resource_manager
@@ -72,7 +89,7 @@ node "Isolated Capsule" {
 		[Pulp Streamer] as pulp_capsule_streamer
 	}
 
-	node "Apache" as smart_proxy_apache {
+	frame "Apache" as smart_proxy_apache {
 		[Puppet Master] as puppet_master_capsule
 		[Mod WSGI] as mod_wsgi_capsule
 		[Mod WSGI pulp-cont] as mod_wsgi_pulp_cont_capsule
@@ -81,18 +98,19 @@ node "Isolated Capsule" {
 
 }
 
-node "Isolated Client" {
-	[Isolated Yum] as isolated_yum
-	[Isolated RHSM / Subscription Manager] as isolated_rhsm
-	[Isolated Katello Agent / Goferd] as isolated_katello_agent
-	[Isolated Puppet Agent] as isolated_puppet
-}
 
 'Note Section
 
-note right of postgres
-localhost:5432 
-end note
+'note right of postgres
+'localhost:5432 
+'end note
+
+'or
+
+'note top of postgres : localhost:5432
+'note right of browser : localhost:5432
+
+
 
 '# # # CONNECTIONS # # #
 
