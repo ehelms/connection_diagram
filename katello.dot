@@ -18,19 +18,22 @@ frame "Satellite Server" {
 '	}
 
 	database "Server DB" {
-		[Postgres] as postgres
-		[MongoDB] as mongo_server
+		[Postgres\n- Listen on localhost:5432] as postgres
+		[MongoDB\n- Listen on localhost:27017] as mongo_server
 	}
 	
 	
-	[Qpid] as qpidd_server
-	[Qdrouterd / Dispatch Router] as qdrouterd_server
-	[Smart Proxy / Foreman Proxy] as server_smart_proxy
-	[Smart Proxy Dynflow Core] as server_smart_proxy_dynflow_core
-	[Squid] as server_squid
+	[Qpid\n- Listen on localhost:5671\n- Listen on localhost:5672] as qpidd_server
+	[Qdrouterd / Dispatch Router\n- Listen on hostname:5646\n- Listen on hostname:5647] as qdrouterd_server
+	[Smart Proxy / Foreman Proxy\n- Listen on hostname:9090] as server_smart_proxy
+	[Smart Proxy Dynflow Core\n- Listen on hostname:8008] as server_smart_proxy_dynflow_core
+	[Squid\n- Listen on hostname:3128] as server_squid
+	[TFTP] as server_tftp
+	[DNS] as server_dns
+	[DHCP] as server_dhcp
 
 	frame "Tomcat" as tomcat_server {
-	  [Candlepin] as candlepin
+	  [Candlepin\n- Listen on hostname:8080\n- Listen on hostname:8443\n- Listen on hostname:8009\n- Listen on localhost:8005] as candlepin
 	}
 
 	frame "Pulp" as pulp_server {
@@ -80,6 +83,10 @@ frame "Isolated Capsule" {
 	[Qdrouterd / Dispatch Router] as qdrouterd_capsule
 	[Smart Proxy / Foreman Proxy] as capsule_smart_proxy
 	[Squid] as capsule_squid
+	[TFTP] as capsule_tftp
+	[DNS] as capsule_dns
+	[DHCP] as capsule_dhcp
+
 
 	frame "Pulp" as pulp_capsule {
 		[API] as pulp_capsule_api
@@ -201,6 +208,10 @@ pulp_server_api -[#green]-> qpidd_server : hostname:5671
 
 'Foreman Proxy / Smart Proxy
 server_smart_proxy -[#green]-> foreman : 443
+server_smart_proxy ..> server_tftp
+server_smart_proxy ..> server_dhcp
+server_smart_proxy ..> server_dns
+
 
 '---
 
@@ -211,7 +222,6 @@ server_smart_proxy -[#green]-> foreman : 443
 isolated_rhsm -[#green]-> smart_proxy_apache : 8443
 
 ' Yum
-
 isolated_yum -[#green]-> smart_proxy_apache : 443
 isolated_yum -[#red]-> smart_proxy_apache : 80
 
@@ -229,7 +239,9 @@ isolated_puppet -[#green]-> smart_proxy_apache : 443
 qdrouterd_capsule -[#green]-> qdrouterd_server : hostname:5646
 
 ' Smart Proxy
-'smart_proxy_apache -[#green]-> server_apache : 443
+capsule_smart_proxy ..> capsule_tftp
+capsule_smart_proxy ..> capsule_dhcp
+capsule_smart_proxy ..> capsule_dns
 
 
 ' Customer Browser
@@ -248,13 +260,51 @@ browser -[#orange]-> foreman : 443
 
 
 legend right
+	<b>Line Colors</b>
 	(Green) -> SSL two-way
 	(Orange) -> SSL one-way
 	(Cyan) -> SSL no cert validation
 	(Red) -> no SSL
 
+	<b>Reference</b>
 	(Isolated Capsule) -> External Capsule
 	(Isolated Content Host) -> Content Host registered on the External Capsule
+	
+	<b>Ports on Listen State</b>
+	Apache:
+		- Listen on hostname:80
+		- Listen on hostname:443
+		- Listen on hostname:5000
+		- Listen on hostname:8140
+
+	Foreman Proxy / Smart Proxy:
+		- Listen on hostname:9090
+
+	Smart Proxy Dynflow Core:
+		- Listen on hostname:8008
+
+	Postgres:
+		- Listen on localhost:5432
+
+	MongoDB:
+		- Listen on localhost:27017
+
+	Qpid:
+		- Listen on localhost:5671
+		- Listen on localhost:5672
+
+	Qdrouterd / Dispatch Router:
+		- Listen on hostname:5646
+		- Listen on hostname:5647
+
+	Tomcat:
+		- Listen on hostname:8080
+		- Listen on hostname:8443
+		- Listen on hostname:8009
+		- Listen on hostname:8085
+
+	Squid:
+		- Listen on hostname:3128
 endlegend
 
 @enduml
