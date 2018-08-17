@@ -275,6 +275,7 @@ legend right
 	Apache:							Apache:
 		- Listen on hostname:80			- Listen on hostname:80
 		- Listen on hostname:443			- Listen on hostname:443
+		- Listen on hostname:8140			- Listen on hostname:8140
 		- Listen on hostname:5000			- Listen on hostname:5000
 
 	Foreman Proxy / Smart Proxy:		Foreman Proxy / Smart Proxy:
