@@ -269,16 +269,16 @@ legend right
 	<b>Reference</b>
 	(Isolated Capsule) -> External Capsule
 	(Isolated Content Host) -> Content Host registered on the External Capsule
-	
-	<b>Ports on Listen State</b>
-	Apache:
-		- Listen on hostname:80
-		- Listen on hostname:443
-		- Listen on hostname:5000
-		- Listen on hostname:8140
 
-	Foreman Proxy / Smart Proxy:
-		- Listen on hostname:9090
+	<b>Ports on Listen State</b>
+	<b>Server</b>						<b>Capsule</b>
+	Apache:							Apache:
+		- Listen on hostname:80			- Listen on hostname:80
+		- Listen on hostname:443			- Listen on hostname:443
+		- Listen on hostname:5000			- Listen on hostname:5000
+
+	Foreman Proxy / Smart Proxy:		Foreman Proxy / Smart Proxy:
+		- Listen on hostname:9090			- Listen on hostname:9090
 
 	Smart Proxy Dynflow Core:
 		- Listen on hostname:8008
@@ -286,25 +286,26 @@ legend right
 	Postgres:
 		- Listen on localhost:5432
 
-	MongoDB:
-		- Listen on localhost:27017
+	MongoDB:						MongoDB:
+		- Listen on localhost:27017			- Listen on localhost:27017
 
-	Qpid:
-		- Listen on localhost:5671
-		- Listen on localhost:5672
+	Qpid:							Qpid:
+		- Listen on localhost:5671			- Listen on localhost:5671
+		- Listen on localhost:5672			- Listen on localhost:5672
 
-	Qdrouterd / Dispatch Router:
+	Qdrouterd / Dispatch Router:		Qdrouterd / Dispatch Router:
 		- Listen on hostname:5646
-		- Listen on hostname:5647
+		- Listen on hostname:5647			- Listen on hostname:5647
 
 	Tomcat:
 		- Listen on hostname:8080
-		- Listen on hostname:8443
+		- Listen on hostname:8443			- Listen on hostname:8443
 		- Listen on hostname:8009
 		- Listen on hostname:8085
 
-	Squid:
-		- Listen on hostname:3128
+	Squid:							Squid:
+		- Listen on hostname:3128			- Listen on hostname:3128
+
 endlegend
 
 @enduml
