@@ -9,6 +9,8 @@ package "Content Host" {
 	[RHSM / Subscription Manager] as rhsm
 	[Katello Agent / Goferd] as katello_agent
 	[Puppet Agent] as puppet
+	[Foreman SCAP Client] as foreman_scap_client
+	[Insights] as insights_client
 }
 
 frame "Satellite Server" {
@@ -26,8 +28,7 @@ frame "Satellite Server" {
 	[Qpid\n- Listen on localhost:5671\n- Listen on localhost:5672] as qpidd_server
 	[Qdrouterd / Dispatch Router\n- Listen on hostname:5646\n- Listen on hostname:5647] as qdrouterd_server
 	[Smart Proxy / Foreman Proxy\n- Listen on hostname:9090] as server_smart_proxy
-	[Smart Proxy Dynflow Core\n- Listen on hostname:8008] as server_smart_proxy_dynflow_core
-	[Squid\n- Listen on hostname:3128] as server_squid
+	[Smart Proxy Dynflow Core(REX)\n- Listen on hostname:8008] as server_smart_proxy_dynflow_core
 	[TFTP] as server_tftp
 	[DNS] as server_dns
 	[DHCP] as server_dhcp
@@ -36,16 +37,22 @@ frame "Satellite Server" {
 	  [Candlepin\n- Listen on hostname:8080\n- Listen on hostname:8443\n- Listen on hostname:8009\n- Listen on localhost:8005] as candlepin
 	}
 
+	frame "Streamer" as streamer_server {
+		[Pulp Streamer\n- Listen on localhost:8751] as pulp_server_streamer
+		[Squid\n- Listen on hostname:3128] as server_squid
+		[WSGI App] as server_wsgi_streamer
+	}
+	
 	frame "Pulp" as pulp_server {
 		[API] as pulp_server_api
 		[Pulp Worker] as pulp_server_worker
 		[Pulp Resource Manager] as pulp_server_resource_manager
 		[Pulp Celery Beat] as pulp_server_celery_beat
-		[Pulp Streamer] as pulp_server_streamer
+'		[Pulp Streamer] as pulp_server_streamer
 	}
 
 	frame "Apache" as server_apache {
-		[Puppet Master] as puppet_master
+		[Puppet Master] as puppet_master_server
 		[Mod WSGI] as mod_wsgi
 		[Mod WSGI pulp-cont] as mod_wsgi_pulp_cont
 		[Mod WSGI pulp-forg] as mod_wsgi_pulp_forg
@@ -87,7 +94,6 @@ frame "Isolated Capsule" {
 	[DNS] as capsule_dns
 	[DHCP] as capsule_dhcp
 
-
 	frame "Pulp" as pulp_capsule {
 		[API] as pulp_capsule_api
 		[Pulp Worker] as pulp_capsule_worker
@@ -128,7 +134,7 @@ rhsm -[#green]-> katello : 443
 
 ' Puppet Agent
 '''Updated port from 443 to 8140
-puppet -[#green]-> puppet_master : 443
+puppet -[#green]-> puppet_master_server : 8140
 
 
 ' Katello Agent / Goferd
@@ -137,6 +143,13 @@ katello_agent -[#green]-> qdrouterd_server : 5647
 ' Yum
 yum  -[#green]-> server_apache : 443
 yum -[#red]-> server_apache : 80
+
+' Foreman Scap Client
+foreman_scap_client -> server_smart_proxy : hostname:9090
+
+' Insights
+insights_client -> server_smart_proxy : hostname:9090
+
 '---
 
 
@@ -149,7 +162,6 @@ mod_wsgi -> mongo_server: localhost:27017
 mod_wsgi_pulp_forg -> mongo_server: localhost:27017
 
 'Foreman
-foreman -> qpidd_server : localhost:5671
 foreman -[#red]down-> postgres : localhost:5432
 ''' Added hostname:9090
 foreman -[#green]-> server_smart_proxy : hostname:9090
@@ -184,7 +196,7 @@ katello ..> foreman_docker
 foreman_discovery ..> foreman
 foreman_docker ..> foreman
 foreman_scap ..> foreman
-foreman_tasks ..> foreman
+'foreman_tasks ..> foreman
 foreman_template ..> foreman
 foreman_ansible ..> foreman
 foreman_virt_who_configure ..> foreman
@@ -208,10 +220,15 @@ pulp_server_api -[#green]-> qpidd_server : hostname:5671
 
 'Foreman Proxy / Smart Proxy
 server_smart_proxy -[#green]-> foreman : 443
+server_smart_proxy -> server_smart_proxy_dynflow_core : hostname:8008
+server_smart_proxy -> puppet_master_server
 server_smart_proxy ..> server_tftp
 server_smart_proxy ..> server_dhcp
 server_smart_proxy ..> server_dns
 
+'Smart Proxy Dynflow Core
+'server_smart_proxy_dynflow_core -up-> foreman : hostname:443
+server_smart_proxy_dynflow_core -> foreman : hostname:443
 
 '---
 
@@ -281,8 +298,8 @@ legend right
 	Foreman Proxy / Smart Proxy:		Foreman Proxy / Smart Proxy:
 		- Listen on hostname:9090			- Listen on hostname:9090
 
-	Smart Proxy Dynflow Core:
-		- Listen on hostname:8008
+	Smart Proxy Dynflow Core(REX):	Smart Proxy Dynflow Core(REX):
+		- Listen on hostname:8008			- Listen on hostname:8008
 
 	Postgres:
 		- Listen on localhost:5432
@@ -306,6 +323,9 @@ legend right
 
 	Squid:							Squid:
 		- Listen on hostname:3128			- Listen on hostname:3128
+
+	Streamer:						Streamer:
+		- Listen on localhost:8751			- Listen on localhost:8751
 
 endlegend
 
