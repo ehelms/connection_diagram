@@ -29,8 +29,8 @@ frame "Satellite Server" {
 	[Qdrouterd / Dispatch Router\n- Listen on hostname:5646\n- Listen on hostname:5647] as qdrouterd_server
 	[Smart Proxy / Foreman Proxy\n- Listen on hostname:9090] as server_smart_proxy
 	[Smart Proxy Dynflow Core(REX)\n- Listen on hostname:8008] as server_smart_proxy_dynflow_core
-	[TFTP] as server_tftp
-	[DNS] as server_dns
+	[TFTP\n- Listen on hostname:69] as server_tftp
+	[DNS\n- Listen on hostname:53] as server_dns
 	[DHCP] as server_dhcp
 
 	frame "Tomcat" as tomcat_server {
@@ -77,6 +77,8 @@ package "Isolated Content Host" {
 	[Isolated RHSM / Subscription Manager] as isolated_rhsm
 	[Isolated Katello Agent / Goferd] as isolated_katello_agent
 	[Isolated Puppet Agent] as isolated_puppet
+	[Foreman SCAP Client] as isolated_foreman_scap_client
+	[Insights] as isolated_insights_client
 }
 
 
@@ -89,10 +91,15 @@ frame "Isolated Capsule" {
 	[Qpid] as qpidd_capsule
 	[Qdrouterd / Dispatch Router] as qdrouterd_capsule
 	[Smart Proxy / Foreman Proxy] as capsule_smart_proxy
-	[Squid] as capsule_squid
-	[TFTP] as capsule_tftp
-	[DNS] as capsule_dns
+	[TFTP\n- Listen on hostname:69] as capsule_tftp
+	[DNS\n- Listen on hostname:53] as capsule_dns
 	[DHCP] as capsule_dhcp
+
+	frame "Streamer" as streamer_server_capsule {
+		[Pulp Streamer\n- Listen on localhost:8751] as capsule_pulp_server_streamer
+		[Squid\n- Listen on hostname:3128] as capsule_squid
+		[WSGI App] as capsule_wsgi_streamer
+	}
 
 	frame "Pulp" as pulp_capsule {
 		[API] as pulp_capsule_api
