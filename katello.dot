@@ -297,42 +297,42 @@ legend right
 	<b>Ports on Listen State</b>
 	<b>Server</b>						<b>Capsule</b>
 	Apache:							Apache:
-		- Listen on hostname:80			- Listen on hostname:80
-		- Listen on hostname:443			- Listen on hostname:443
-		- Listen on hostname:8140			- Listen on hostname:8140
-		- Listen on hostname:5000			- Listen on hostname:5000
+		- Listen on hostname:80			- Listen on hostname:80		(unencrypted)
+		- Listen on hostname:443			- Listen on hostname:443		(SSL, CA=custom)
+		- Listen on hostname:8140			- Listen on hostname:8140		(SSL, CA=puppet)
+		- Listen on hostname:5000			- Listen on hostname:5000		(SSL, CA=custom)
 
 	Foreman Proxy / Smart Proxy:		Foreman Proxy / Smart Proxy:
-		- Listen on hostname:9090			- Listen on hostname:9090
+		- Listen on hostname:9090			- Listen on hostname:9090		(SSL, CA=custom)
 
 	Smart Proxy Dynflow Core(REX):	Smart Proxy Dynflow Core(REX):
-		- Listen on hostname:8008			- Listen on hostname:8008
+		- Listen on hostname:8008			- Listen on hostname:8008		(SSL, CA=custom)
 
 	Postgres:
-		- Listen on localhost:5432
+		- Listen on localhost:5432										(SSL, CA=satellite)
 
 	MongoDB:						MongoDB:
-		- Listen on localhost:27017			- Listen on localhost:27017
+		- Listen on localhost:27017			- Listen on localhost:27017		(SSL, CA=satellite)
 
 	Qpid:							Qpid:
-		- Listen on localhost:5671			- Listen on localhost:5671
-		- Listen on localhost:5672			- Listen on localhost:5672
+		- Listen on localhost:5671			- Listen on localhost:5671		(SSL, CA=satellite)
+		- Listen on localhost:5672			- Listen on localhost:5672		(unencrypted)
 
 	Qdrouterd / Dispatch Router:		Qdrouterd / Dispatch Router:
-		- Listen on hostname:5646
-		- Listen on hostname:5647			- Listen on hostname:5647
+		- Listen on hostname:5646										(SSL, CA=satellite)
+		- Listen on hostname:5647			- Listen on hostname:5647		(SSL, CA=satellite)
 
 	Tomcat:
-		- Listen on hostname:8080
-		- Listen on hostname:8443			- Listen on hostname:8443
-		- Listen on hostname:8009
-		- Listen on hostname:8085
+		- Listen on hostname:8080										(unencrypted)
+		- Listen on hostname:8443			- Listen on hostname:8443		(SSL, CA=satellite)
+		- Listen on hostname:8009										(unencrypted)
+		- Listen on hostname:8085										()
 
 	Squid:							Squid:
-		- Listen on hostname:3128			- Listen on hostname:3128
+		- Listen on hostname:3128			- Listen on hostname:3128		(unencrypted)
 
 	Streamer:						Streamer:
-		- Listen on localhost:8751			- Listen on localhost:8751
+		- Listen on localhost:8751			- Listen on localhost:8751		()
 
 endlegend
 
