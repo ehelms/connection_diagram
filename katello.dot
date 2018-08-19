@@ -90,12 +90,13 @@ frame "Isolated Capsule" {
 	[Qpid\n- Listen on localhost:5671\n- Listen on localhost:5672] as qpidd_capsule
 	[Qdrouterd / Dispatch Router\n- Listen on hostname:5646\n- Listen on hostname:5647] as qdrouterd_capsule
 	[Smart Proxy / Foreman Proxy\n- Listen on hostname:9090] as capsule_smart_proxy
+	[Smart Proxy Dynflow Core(REX)\n- Listen on hostname:8008] as capsule_smart_proxy_dynflow_core
 	[TFTP\n- Listen on hostname:69] as capsule_tftp
 	[DNS\n- Listen on hostname:53] as capsule_dns
 	[DHCP] as capsule_dhcp
 
 	frame "Streamer" as streamer_server_capsule {
-		[Pulp Streamer\n- Listen on localhost:8751] as capsule_pulp_server_streamer
+		[Pulp Streamer\n- Listen on localhost:8751] as pulp_capsule_streamer
 		[Squid\n- Listen on hostname:3128] as capsule_squid
 		[WSGI App] as capsule_wsgi_streamer
 	}
@@ -238,15 +239,37 @@ isolated_insights_client -> capsule_smart_proxy : hostname:9090
 ' Puppet Agent
 'isolated_puppet -[#green]-> smart_proxy_apache : 8140
 isolated_puppet -[#green]-> puppet_master_capsule : 8140
-
+'---
 
 '##
-'## Capsule Server ## <<CHECK>>
+'## Capsule Server ##
+
+
+'Pulp
+pulp_capsule_worker -[#red]-> mongo_capsule : localhost:27017
+pulp_capsule_resource_manager -[#red]-> mongo_capsule : localhost:27017
+pulp_capsule_celery_beat -[#red]-> mongo_capsule : localhost:27017
+pulp_capsule_streamer -[#red]-> mongo_capsule : localhost:27017
+
+pulp_capsule_worker -[#green]-> qpidd_capsule : hostname:5671
+pulp_capsule_resource_manager -[#green]-> qpidd_capsule : hostname:5671
+pulp_capsule_celery_beat -[#green]-> qpidd_capsule : hostname:5671
+pulp_capsule_streamer -[#green]-> qpidd_capsule : hostname:5671
+
+'Pulp API
+pulp_capsule_api -[#red]-> mongo_capsule : localhost:27017
+pulp_capsule_api -[#green]-> qpidd_capsule : hostname:5671
 
 ' Qdrouterd / Dispatch Router
 qdrouterd_capsule -[#green]-> qdrouterd_server : hostname:5646
+qdrouterd_capsule -[#green]-> qpidd_capsule : localhost:5671
 
-' Smart Proxy
+
+'Foreman Proxy / Smart Proxy
+'capsule_smart_proxy -[#green]-> foreman : 443 ???
+capsule_smart_proxy -> capsule_smart_proxy_dynflow_core : hostname:8008
+capsule_smart_proxy -> puppet_master_capsule
+
 capsule_smart_proxy ..> capsule_tftp
 capsule_smart_proxy ..> capsule_dhcp
 capsule_smart_proxy ..> capsule_dns
