@@ -48,7 +48,6 @@ frame "Satellite Server" {
 		[Pulp Worker] as pulp_server_worker
 		[Pulp Resource Manager] as pulp_server_resource_manager
 		[Pulp Celery Beat] as pulp_server_celery_beat
-'		[Pulp Streamer] as pulp_server_streamer
 	}
 
 	frame "Apache" as server_apache {
@@ -85,12 +84,12 @@ package "Isolated Content Host" {
 frame "Isolated Capsule" {
 	
 	database "Capsule DB" {
-		[MongoDB] as mongo_capsule
+		[MongoDB\n- Listen on localhost:27017] as mongo_capsule
 	}
 	
-	[Qpid] as qpidd_capsule
-	[Qdrouterd / Dispatch Router] as qdrouterd_capsule
-	[Smart Proxy / Foreman Proxy] as capsule_smart_proxy
+	[Qpid\n- Listen on localhost:5671\n- Listen on localhost:5672] as qpidd_capsule
+	[Qdrouterd / Dispatch Router\n- Listen on hostname:5646\n- Listen on hostname:5647] as qdrouterd_capsule
+	[Smart Proxy / Foreman Proxy\n- Listen on hostname:9090] as capsule_smart_proxy
 	[TFTP\n- Listen on hostname:69] as capsule_tftp
 	[DNS\n- Listen on hostname:53] as capsule_dns
 	[DHCP] as capsule_dhcp
@@ -106,7 +105,6 @@ frame "Isolated Capsule" {
 		[Pulp Worker] as pulp_capsule_worker
 		[Pulp Resource Manager] as pulp_capsule_resource_manager
 		[Pulp Celery Beat] as pulp_capsule_celery_beat
-		[Pulp Streamer] as pulp_capsule_streamer
 	}
 
 	frame "Apache" as smart_proxy_apache {
@@ -114,22 +112,10 @@ frame "Isolated Capsule" {
 		[Mod WSGI] as mod_wsgi_capsule
 		[Mod WSGI pulp-cont] as mod_wsgi_pulp_cont_capsule
 		[Mod WSGI pulp-forg] as mod_wsgi_pulp_forg_capsule
+		[Candlepin (Port Redirect)\n- Listen on hostname:8443] as capsule_candlepin
 	}
 
 }
-
-
-'Note Section
-
-'note right of postgres
-'localhost:5432 
-'end note
-
-'or
-
-'note top of postgres : localhost:5432
-'note right of browser : localhost:5432
-
 
 
 '# # # CONNECTIONS # # #
@@ -140,7 +126,6 @@ frame "Isolated Capsule" {
 rhsm -[#green]-> katello : 443
 
 ' Puppet Agent
-'''Updated port from 443 to 8140
 puppet -[#green]-> puppet_master_server : 8140
 
 
@@ -170,7 +155,6 @@ mod_wsgi_pulp_forg -> mongo_server: localhost:27017
 
 'Foreman
 foreman -[#red]down-> postgres : localhost:5432
-''' Added hostname:9090
 foreman -[#green]-> server_smart_proxy : hostname:9090
 
 'Pulp
@@ -186,7 +170,6 @@ pulp_server_streamer -[#green]-> qpidd_server : hostname:5671
 
 'Foreman Tasks / Dynflow
 foreman_tasks -> qpidd_server : hostname:5671
-''' Added connection to the Postgres
 foreman_tasks -> postgres : localhost:5432
 
 'Candlepin
@@ -195,7 +178,6 @@ candlepin -> qpidd_server : localhost:5671
 
 'Internal <<CHECK>>
 
-'foreman_tasks -down..> dynflow
 katello ..> foreman
 katello ..> foreman_tasks
 katello ..> foreman_docker
@@ -203,7 +185,6 @@ katello ..> foreman_docker
 foreman_discovery ..> foreman
 foreman_docker ..> foreman
 foreman_scap ..> foreman
-'foreman_tasks ..> foreman
 foreman_template ..> foreman
 foreman_ansible ..> foreman
 foreman_virt_who_configure ..> foreman
@@ -211,11 +192,8 @@ foreman_virt_who_configure ..> foreman
 foreman_tasks ..> postgres
 
 'Katello
-''' OK
 katello -[#cyan]down-> candlepin : localhost:8443
-''' OK
 katello -[#cyan]-> pulp_server_api : hostname:443
-''' OK
 katello -[#orange]> qpidd_server : hostname:5671
 
 'Qdrouterd / Dispatch Router
@@ -234,13 +212,12 @@ server_smart_proxy ..> server_dhcp
 server_smart_proxy ..> server_dns
 
 'Smart Proxy Dynflow Core
-'server_smart_proxy_dynflow_core -up-> foreman : hostname:443
 server_smart_proxy_dynflow_core -> foreman : hostname:443
 
 '---
 
 
-'## Capsule Server ## <<CHECK>>
+'## Isolated Content Hosts ##
 '---
 ' RHSM / Subscription Manager
 isolated_rhsm -[#green]-> smart_proxy_apache : 8443
@@ -252,12 +229,19 @@ isolated_yum -[#red]-> smart_proxy_apache : 80
 ' Katello Agent / Goferd
 isolated_katello_agent -[#green]-> qdrouterd_capsule : 5647
 
-' Puppet Agent
-isolated_puppet -[#green]-> smart_proxy_apache : 443
-'isolated_puppet -[#green]-> puppet_master_capsule : 443
-'isolated_puppet -[#green]-> smart_proxy_puppet_master : 8140
-'Note. Necessary check info above, I believe be directly via apache:443
+' Foreman Scap Client
+isolated_foreman_scap_client -> capsule_smart_proxy : hostname:9090
 
+' Insights
+isolated_insights_client -> capsule_smart_proxy : hostname:9090
+
+' Puppet Agent
+'isolated_puppet -[#green]-> smart_proxy_apache : 8140
+isolated_puppet -[#green]-> puppet_master_capsule : 8140
+
+
+'##
+'## Capsule Server ## <<CHECK>>
 
 ' Qdrouterd / Dispatch Router
 qdrouterd_capsule -[#green]-> qdrouterd_server : hostname:5646
